@@ -1,0 +1,175 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="author" content="Candymoon0627"/><meta name="keyword"/><meta name="description" content="从 Thought、Action、Observation 理解 ReAct，梳理提示与微调、稀疏思考及实验结论的适用边界。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ReAct 论文学习笔记">
+<meta property="og:url" content="http://candymoon0627.github.io/2026/10/13/ReAct_%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/index.html">
+<meta property="og:site_name" content="Candymoon&#39;s Home">
+<meta property="og:description" content="从 Thought、Action、Observation 理解 ReAct，梳理提示与微调、稀疏思考及实验结论的适用边界。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-12T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-10-13T10:27:54.799Z">
+<meta property="article:author" content="Candymoon0627">
+<meta property="article:tag" content="ReAct">
+<meta property="article:tag" content="论文阅读">
+<meta name="twitter:card" content="summary"><title>ReAct 论文学习笔记 - Candymoon的小窝 - 记录Candymoon的日常</title><link rel="shortcut icon" href="/img/site-icon.png">
+<link rel="stylesheet" href="/css/style.css" id="dm-light">
+
+
+<link rel="stylesheet" href="/css/third-party/katex.min.css">
+
+
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+<script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+<meta name="generator" content="Hexo 8.1.0"></head><body><header><div class="top-nav" ondblclick="scrollToTop()"><div class="nav-info"><div class="nav-icon"><img id="nav-icon" src="/img/site-icon.png"/></div><div class="nav-title"><a id="nav-title" href="/" title="主页">Candymoon's Home</a></div></div><div class="nav-ribbon"><div class="top-menu-expanded"><a class="top-menu-item" href="/archives"><span>归档</span></a><a class="top-menu-item" href="/categories"><span>分类</span></a><a class="top-menu-item" href="/tags"><span>标签</span></a></div><div class="top-search" onclick="toggleSearchWindow()"><div id="top-search-btn" title="搜索"><i class="icon fa-solid fa-magnifying-glass"></i><span>搜索</span></div></div><div id="top-menu-btn" onclick="openTopMenu()" title="打开菜单"><i class="fa-solid fa-bars fa-lg"></i></div></div></div></header><div id="top-menu-hidden"><div class="menu-hidden-content"><div class="menu-hidden-nav"><a class="menu-hidden-item" href="/archives"><i class="fa-solid fa-box-archive fa-sm"></i><span>归档</span></a><a class="menu-hidden-item" href="/categories"><i class="fa-regular fa-folder-open fa-sm"></i><span>分类</span></a><a class="menu-hidden-item" href="/tags"><i class="fa-solid fa-tags fa-sm"></i><span>标签</span></a></div></div><div class="menu-hidden-blank" onclick="closeTopMenu()"></div></div>
+<div class="blog-info"><div class="blog-pic"><img id="blog-pic" src="/img/site-icon.png"/></div><div class="blog-title"><i class="fa-solid fa-paw fa-2xs fa-rotate-by"></i><span>Candymoon的小窝</span><i class="fa-solid fa-paw fa-2xs fa-rotate-by"></i></div><div class="blog-desc">记录Candymoon的学习&日常</div></div><div class="main"><div class="main-content"><article class="post"><div class="post-title"><h1><i class="fa-solid fa-paw"></i>ReAct 论文学习笔记</h1></div><div class="post-info"><div class="post-info-first-line"><div class="post-date"><i class="icon fa-regular fa-calendar-plus" title="发布日期"></i><time class="publish-time">2026-10-13</time><i class="icon fa-regular fa-calendar-check" title="更新日期"></i><time class="update-time">2026-10-13</time></div>
+<div class="post-categories"><i class="icon fa-regular fa-folder-open" title="分类"></i><a class="post-category" href="/categories/AI/">AI</a></div>
+<div class="post-tags"><i class="icon fa-solid fa-tags" title="标签"></i><a class="post-tag" href="/tags/ReAct/">ReAct</a><i class="icon fa-solid fa-tags" title="标签"></i><a class="post-tag" href="/tags/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/">论文阅读</a></div></div><div class="post-info-second-line"><div class="post-copyright"><i class="icon fa-brands fa-creative-commons" title="版权声明"></i><span>版权声明: </span><a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh-hans" title="CC BY-NC-ND 4.0">署名-非商业性使用-禁止演绎 4.0</a></div>
+<div class="post-word-count"><i class="icon fa-solid fa-pen-to-square"></i><span>全文约2.1K字</span></div><div class="pageview-post"><i class="icon fa-regular fa-eye"></i><span id="busuanzi_container_page_pv">阅读次数: <span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner"></i></span></span></div></div></div><div class="post-content"><p>本文讨论的是姚舜禹（Shunyu Yao）等人的 <strong>ReAct</strong>，即 <em>Reasoning + Acting</em>。论文题为 <em>ReAct: Synergizing Reasoning and Acting in Language Models</em>，发表于 ICLR 2023。</p>
+<p><strong>论文原文：</strong><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2210.03629">arXiv 论文页面</a> · <a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2210.03629">PDF 全文</a></p>
+<p>阅读范围为论文第 1–4 节、附录 C.4 与 E.1。以下以学习理解为主，涉及实验的结论均限定在论文的具体设置下。</p>
+<span id="more"></span>
+<h2 id="一、只推理与只行动，分别缺少什么？">一、只推理与只行动，分别缺少什么？</h2>
+<p>先区分论文中的两个基线：<strong>CoT（Chain-of-Thought）</strong> 生成推理过程，但在这里不通过外部工具核实信息；<strong>Act</strong>可以与环境交互、获得观察，但轨迹中没有显式的 Thought。</p>
+<p>纯 CoT 缺少外部核实机会，可能出现事实幻觉。如果后续推理继续依赖错误事实，错误就会沿着推理过程传播。</p>
+<p>Act 即使拿到了外部信息，也可能无法正确整合证据或跟踪当前状态。论文图 1 中，Act 输出 <code>Finish[yes]</code> 的失败体现了答案综合的问题；ALFWorld 中反复尝试无效拿取，则体现了状态跟踪的问题。</p>
+<p>这两类失败让我注意到两个不同环节：信息是否可靠，以及模型能否利用已有信息做出合适的下一步决策。</p>
+<h2 id="二、Thought、Action-与-Observation-如何形成协同？">二、Thought、Action 与 Observation 如何形成协同？</h2>
+<p>ReAct 将思考与环境交互放进同一条任务轨迹。理解这条轨迹时，需要区分三种内容：</p>
+<table>
+<thead>
+<tr>
+<th>内容</th>
+<th>由谁产生</th>
+<th>在任务中的作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thought</td>
+<td>模型</td>
+<td>整理信息、形成判断、跟踪进度或制定计划</td>
+</tr>
+<tr>
+<td>Action</td>
+<td>模型生成，工具或环境执行</td>
+<td>检索信息或与环境交互</td>
+</tr>
+<tr>
+<td>Observation</td>
+<td>工具或环境</td>
+<td>返回行动结果，提供外部反馈</td>
+</tr>
+</tbody>
+</table>
+<p>在问答任务中，可以把它理解为下面的循环：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Thought：根据当前信息，判断下一步需要做什么</span><br><span class="line">Action：发起检索或其他环境行动</span><br><span class="line">Observation：接收行动返回的信息</span><br><span class="line">Thought：结合新信息，继续判断或调整计划</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>这里有两个方向的联系：</p>
+<ul>
+<li><strong>Reason to act：</strong> 推理指导下一步行动，比如决定还缺少什么证据、接下来应该检索什么。</li>
+<li><strong>Act to reason：</strong> 行动获取外部信息，让后续推理有新的依据。</li>
+</ul>
+<p>我对“协同”的理解是：推理会改变行动选择，行动反馈也会改变后续推理。判断是否形成协同，需要看这两种影响是否发生。</p>
+<h3 id="为什么把-Thought-写出来可能有帮助？">为什么把 Thought 写出来可能有帮助？</h3>
+<p>Thought 可以把分散的信息整理成明确的判断、进度或计划。这些文字会进入后续上下文，成为模型继续生成的依据。例如，记录某个子目标已经完成，可以帮助后续行动转向下一个子目标。</p>
+<p>因此，显式思考具有实际的上下文作用。不过，Act 没有显式 Thought，也不等于完全不能推断；更明确的提示同样可能改善 Act 的行为，论文没有证明它无法做到。</p>
+<h2 id="三、从行动空间与上下文理解-ReAct">三、从行动空间与上下文理解 ReAct</h2>
+<p>论文第 2 节将 ReAct 表述为对行动空间的扩展：</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mover accent="true"><mi mathvariant="script">A</mi><mo>^</mo></mover><mo>=</mo><mi mathvariant="script">A</mi><mo>∪</mo><mi mathvariant="script">L</mi></mrow><annotation encoding="application/x-tex">\hat{\mathcal A}=\mathcal A\cup\mathcal L
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.9468em;"></span><span class="mord katex-accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.9468em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathcal">A</span></span><span style="top:-3.2523em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.0555em;"><span class="mord">^</span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathcal">A</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∪</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathcal">L</span></span></span></span></span></p>
+<p>其中，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="script">A</mi></mrow><annotation encoding="application/x-tex">\mathcal A</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathcal">A</span></span></span></span> 是原有的环境行动空间，<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="script">L</mi></mrow><annotation encoding="application/x-tex">\mathcal L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathcal">L</span></span></span></span> 是语言空间。加入 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="script">L</mi></mrow><annotation encoding="application/x-tex">\mathcal L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathcal">L</span></span></span></span> 后，模型可以选择生成一段思考。</p>
+<p><strong>思考会更新上下文，但不直接改变外部环境。</strong> 思考追加的是模型生成的判断；环境行动及其观察也会进入上下文，其中观察提供外部反馈。阅读轨迹时，需要分清哪些内容来自环境，哪些内容是模型对环境的解释。</p>
+<p>图 1d 中的 Thought 与图 1 的 2b 部分中的 <code>Act: Think</code>，都可以放在这个框架下理解。</p>
+<h3 id="开放的语言空间为什么需要语言先验？">开放的语言空间为什么需要语言先验？</h3>
+<p>可以生成的思考内容非常多。模型既要判断何时思考，也要判断思考什么，这使扩展后的行动选择更加困难。</p>
+<p>论文主要利用预训练模型已有的语言与知识能力，通过少量人工编写的任务轨迹，提示冻结参数的 PaLM-540B 生成思考与行动。示例轨迹为模型提供了如何组织任务过程的参考。</p>
+<h2 id="四、提示与微调：轨迹由谁产生？">四、提示与微调：轨迹由谁产生？</h2>
+<p>笔记中容易混淆的一点，是“给模型看轨迹”和“用轨迹训练模型”的区别。</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>是否更新模型参数</th>
+<th>轨迹的用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>少样本提示</td>
+<td>否</td>
+<td>将人工编写的示例轨迹放入上下文，引导模型完成新任务</td>
+</tr>
+<tr>
+<td>微调</td>
+<td>是</td>
+<td>用模型生成后筛选出的正确答案轨迹训练模型</td>
+</tr>
+</tbody>
+</table>
+<p>在实际执行任务时，模型生成 Thought 和 Action，工具或环境执行行动，再返回 Observation。这里的观察是环境反馈，不能把它当成模型自行生成的事实依据。</p>
+<p>理解 ReAct 时，需要同时看清示例来自哪里、是否更新参数，以及执行过程中每类内容的来源。</p>
+<h2 id="五、自由形式与稀疏思考，分别意味着什么？">五、自由形式与稀疏思考，分别意味着什么？</h2>
+<p><strong>自由形式</strong>描述的是思考内容：Thought 不限于固定模板，可以用于分解目标、更新进度、处理异常或调整计划。</p>
+<p><strong>稀疏思考</strong>描述的是思考出现的频率：多个行动可以沿用同一个计划，等到需要判断、更新进度或处理异常时，再生成新的 Thought。</p>
+<p>两者是不同维度。自由形式的思考可以密集出现，也可以稀疏出现。论文的问答任务采用密集的思考与行动交替；交互决策任务允许模型在较长的行动序列中选择何时思考。</p>
+<h3 id="ReAct-与-ReAct-IM-的比较能说明什么？">ReAct 与 ReAct-IM 的比较能说明什么？</h3>
+<p>ReAct-IM 使用接近 Inner Monologue 的密集、受限思考模式。在论文的 ALFWorld 设置下，ReAct 的灵活思考总体表现更好，但并非每项任务都优于 ReAct-IM。相关比较见<a target="_blank" rel="noopener" href="https://arxiv.org/html/2210.03629v3#S4">论文第 4 节与表 3</a>。</p>
+<p>理解这组消融时，我保留了一个限制：实验同时改变了思考内容和密度，不能把表现差异全部归因于其中一个因素，也不能推出“思考越多、越全面越好”。</p>
+<p>同样，轨迹出现循环可能与没有有效利用反馈有关，但论文没有证明稀疏思考本身会导致循环。分析失败时，仍然需要回到具体轨迹，检查模型如何解释观察、如何选择下一步行动。</p>
+<h2 id="六、编辑-Thought-为什么能改变行为？">六、编辑 Thought 为什么能改变行为？</h2>
+<p>Thought 会进入后续上下文，因此编辑它就可能改变模型接下来生成的行动。论文图 5 展示了通过编辑思考干预行动轨迹的案例，见<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2210.03629">论文全文</a>。</p>
+<p>这为显式思考的可检查性与可干预性提供了例子：人可以阅读模型当前表达的判断，并尝试修改它，使任务沿着调整后的计划继续进行。</p>
+<p>但这个结论有边界。案例没有证明显式 Thought 完整反映了模型内部计算，也不保证任意编辑都会有效。阅读这些文字时，可以把它们看作影响后续行为的上下文，同时避免直接将其等同于模型全部的内部推理过程。</p>
+<h2 id="七、这次阅读留下的理解">七、这次阅读留下的理解</h2>
+<p>读完这几节后，我会从三个问题检查一条 ReAct 轨迹：模型当前依据哪些信息做判断？这次行动是否带回了有用的反馈？下一步决策是否真正利用了这些反馈？</p>
+<p>Thought 提供整理判断与计划的空间，Action 带来与外部环境交互的机会，Observation 则为后续判断提供反馈。对我来说，理解这几个环节如何相互影响，是这次阅读最主要的收获。后续阅读实验或实现时，我也会继续区分方法本身、具体提示设置与实验能够支持的结论。</p>
+<h2 id="参考资料">参考资料</h2>
+<ul>
+<li>姚舜禹（Shunyu Yao）等，<em>ReAct: Synergizing Reasoning and Acting in Language Models</em>，ICLR 2023：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2210.03629">论文页面</a>、<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2210.03629">PDF 原文</a>。</li>
+<li><a target="_blank" rel="noopener" href="https://react-lm.github.io/">作者项目主页</a>。</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ysymyth/ReAct">作者代码仓库</a>。</li>
+</ul>
+</div><div class="post-end"><div class="post-prev"></div><div class="post-reward" onclick="openPostReward()" title="Rewards"><i class="fa-regular fa-thumbs-up fa-xl fa-beat-fade"></i></div><div id="reward-panel" onclick="closePostReward()"><div class="reward-container"><p>如果您喜欢这篇文章，欢迎赞赏支持作者，谢谢💗</p>
+<div class="reward-nav"><div class="reward-item"><img class="reward-img" src="/img/reward/wechat.jpg" title="Wechat" alt="Wechat"/><span>Wechat</span></div><div class="reward-item"><img class="reward-img" src="/img/reward/alipay.jpg" title="Alipay" alt="Alipay"/><span>Alipay</span></div></div></div></div><div class="post-next"><a href="/2026/09/07/agent-study-note-01/" title="下一篇文章"><i class="fa-solid fa-chevron-right fa-lg"></i></a></div></div></article><div id="post-toc"><aside class="toc-aside"><div class="toc-title"><span><i class="fa-solid fa-paw"></i>目录</span></div><div class="toc-container" id="toc-body"><ol class="toc-content"><li class="toc-content-item toc-content-level-2"><a class="toc-content-link" href="#%E4%B8%80%E3%80%81%E5%8F%AA%E6%8E%A8%E7%90%86%E4%B8%8E%E5%8F%AA%E8%A1%8C%E5%8A%A8%EF%BC%8C%E5%88%86%E5%88%AB%E7%BC%BA%E5%B0%91%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-content-number">1.</span> <span class="toc-content-text">一、只推理与只行动，分别缺少什么？</span></a></li><li class="toc-content-item toc-content-level-2"><a class="toc-content-link" href="#%E4%BA%8C%E3%80%81Thought%E3%80%81Action-%E4%B8%8E-Observation-%E5%A6%82%E4%BD%95%E5%BD%A2%E6%88%90%E5%8D%8F%E5%90%8C%EF%BC%9F"><span class="toc-content-number">2.</span> <span class="toc-content-text">二、Thought、Action 与 Observation 如何形成协同？</span></a><ol class="toc-content-child"><li class="toc-content-item toc-content-level-3"><a class="toc-content-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8A%8A-Thought-%E5%86%99%E5%87%BA%E6%9D%A5%E5%8F%AF%E8%83%BD%E6%9C%89%E5%B8%AE%E5%8A%A9%EF%BC%9F"><span class="toc-content-number">2.1.</span> <span class="toc-content-text">为什么把 Thought 写出来可能有帮助？</span></a></li></ol></li><li class="toc-content-item toc-content-level-2"><a class="toc-content-link" href="#%E4%B8%89%E3%80%81%E4%BB%8E%E8%A1%8C%E5%8A%A8%E7%A9%BA%E9%97%B4%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E7%90%86%E8%A7%A3-ReAct"><span class="toc-content-number">3.</span> <span class="toc-content-text">三、从行动空间与上下文理解 ReAct</span></a><ol class="toc-content-child"><li class="toc-content-item toc-content-level-3"><a class="toc-content-link" href="#%E5%BC%80%E6%94%BE%E7%9A%84%E8%AF%AD%E8%A8%80%E7%A9%BA%E9%97%B4%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E8%AF%AD%E8%A8%80%E5%85%88%E9%AA%8C%EF%BC%9F"><span class="toc-content-number">3.1.</span> <span class="toc-content-text">开放的语言空间为什么需要语言先验？</span></a></li></ol></li><li class="toc-content-item toc-content-level-2"><a class="toc-content-link" href="#%E5%9B%9B%E3%80%81%E6%8F%90%E7%A4%BA%E4%B8%8E%E5%BE%AE%E8%B0%83%EF%BC%9A%E8%BD%A8%E8%BF%B9%E7%94%B1%E8%B0%81%E4%BA%A7%E7%94%9F%EF%BC%9F"><span class="toc-content-number">4.</span> <span class="toc-content-text">四、提示与微调：轨迹由谁产生？</span></a></li><li class="toc-content-item toc-content-level-2"><a class="toc-content-link" href="#%E4%BA%94%E3%80%81%E8%87%AA%E7%94%B1%E5%BD%A2%E5%BC%8F%E4%B8%8E%E7%A8%80%E7%96%8F%E6%80%9D%E8%80%83%EF%BC%8C%E5%88%86%E5%88%AB%E6%84%8F%E5%91%B3%E7%9D%80%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-content-number">5.</span> <span class="toc-content-text">五、自由形式与稀疏思考，分别意味着什么？</span></a><ol class="toc-content-child"><li class="toc-content-item toc-content-level-3"><a class="toc-content-link" href="#ReAct-%E4%B8%8E-ReAct-IM-%E7%9A%84%E6%AF%94%E8%BE%83%E8%83%BD%E8%AF%B4%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-content-number">5.1.</span> <span class="toc-content-text">ReAct 与 ReAct-IM 的比较能说明什么？</span></a></li></ol></li><li class="toc-content-item toc-content-level-2"><a class="toc-content-link" href="#%E5%85%AD%E3%80%81%E7%BC%96%E8%BE%91-Thought-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%83%BD%E6%94%B9%E5%8F%98%E8%A1%8C%E4%B8%BA%EF%BC%9F"><span class="toc-content-number">6.</span> <span class="toc-content-text">六、编辑 Thought 为什么能改变行为？</span></a></li><li class="toc-content-item toc-content-level-2"><a class="toc-content-link" href="#%E4%B8%83%E3%80%81%E8%BF%99%E6%AC%A1%E9%98%85%E8%AF%BB%E7%95%99%E4%B8%8B%E7%9A%84%E7%90%86%E8%A7%A3"><span class="toc-content-number">7.</span> <span class="toc-content-text">七、这次阅读留下的理解</span></a></li><li class="toc-content-item toc-content-level-2"><a class="toc-content-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="toc-content-number">8.</span> <span class="toc-content-text">参考资料</span></a></li></ol></div></aside><div class="toc-blank" onclick="tocToggle()"></div></div></div></div><div id="tool-bar"><div id="tool-bar-main"><div id="tool-toggle" onclick="toolToggle()" title="设置"><i class="fa-solid fa-gear"></i></div><div id="toc-toggle" onclick="tocToggle()" title="目录"><i class="fa-solid fa-list-ul"></i></div><div id="back-to-top" onclick="scrollToTop()" title="返回顶部"><i class="fa-solid fa-chevron-up"></i></div></div><div id="tool-bar-more" style="display: none;"><div id="darkmode-switch" onclick="darkmodeSwitch()" title="深色模式"><i class="fa-solid fa-circle-half-stroke"></i></div><div id="font-size-increase" onclick="fontSizeIncrease()" title="放大字体"><i class="fa-solid fa-plus"></i></div><div id="font-size-decrease" onclick="fontSizeDecrease()" title="缩小字体"><i class="fa-solid fa-minus"></i></div></div></div><div id="search-panel"><div class="search-container"><div class="search-head"><div class="search-title"><span><i class="fa-solid fa-paw"></i>搜索</span></div><div class="search-close-btn" onclick="toggleSearchWindow()"><i class="fa-regular fa-circle-xmark"></i></div></div><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input id="search-input" type="text" placeholder="请输入需要搜索的内容……" value=""/></div><div class="search-body"><div id="search-count">匹配结果数: </div><div id="search-result"></div><div id="search-result-empty">未搜索到匹配的文章。</div></div></div></div><footer><div class="footer-content"><div class="copyright-info"><i class="fa-regular fa-copyright fa-xs"></i><span>2024 - 2026 </span><a href="/about">Candymoon0627</a><i class="fa-solid fa-cat fa-sm"></i><span>Powered by </span><a href="https://hexo.io/" target="_blank">Hexo</a><span> &amp; </span><a href="https://github.com/chanwj/hexo-theme-meow" target="_blank" title="v2.1.5">Theme Meow</a></div><div class="pageview-site"><span id="busuanzi_container_site_pv">总访问量 : <span id="busuanzi_value_site_pv"><i class="fa-solid fa-spinner"></i></span></span><span id="busuanzi_container_site_uv">总访客数 : <span id="busuanzi_value_site_uv"><i class="fa-solid fa-spinner"></i></span></span></div></div></footer>
+<script>const GLOBAL_CONFIG = {
+  comment: { theme: ''}
+}
+</script>
+<script src="/js/third-party/darkmode.js"></script>
+<script>var options = {
+  dark: '/css/darkmode.css',
+  startAt: '24:00',
+  endAt: '06:00',
+  checkSystemScheme: 'false',
+  saveOnToggle: 'true'
+};
+var darkMode = new DarkMode(options);
+// change comment theme synchronously 同步修改评论区主题
+if (darkMode.getMode() == "dark" && (false || false)) {
+  if (document.getElementById('comment')) {
+    document.getElementById('comment').getElementsByTagName('script')[0].setAttribute('data-theme', 'noborder_dark');
+  }
+}
+</script><script>if (localStorage.getItem('font-size')) {
+  document.querySelector('.post-content').style.fontSize = localStorage.getItem('font-size') + 'px';
+}
+</script>
+<script src="/js/theme/tool-bar.js"></script>
+
+
+<script src="/js/theme/menu.js"></script>
+
+
+<script src="/js/third-party/clipboard.min.js"></script>
+
+
+<script src="/js/theme/copy.js"></script>
+<script>copyCode();
+</script>
+<script src="/js/theme/reward.js"></script>
+
+<script src="/js/jquery-3.7.1.min.js"></script>
+
+
+<script src="/js/theme/search.js"></script>
+<script>searchFunc('/search.xml', 'search-input', 'search-result');
+</script></body></html>
